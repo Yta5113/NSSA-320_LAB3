@@ -38,6 +38,18 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
+
+  security_rule {
+    name                       = "HTTP"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 # ---------- PUBLIC IP ----------
@@ -84,7 +96,22 @@ resource "azurerm_linux_virtual_machine" "vm" {
     username   = "azureuser"
     public_key = file("C:/Users/Student/.ssh/azure_rsa.pub")
   }
-
+  connection {
+    type        = "ssh"
+    host        = self.public_ip_address
+    user        = "azureuser"
+    private_key = file("C:/Users/Student/.ssh/azure_rsa")
+    timeout     = "10m"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "sleep 60",
+      "sudo apt-get update -y",
+      "sudo apt-get install -y nginx",
+      "sudo systemctl enable --now nginx",
+      "echo'Nginx installed successfully via Terraform!' | sudo tee /var/www/html/index.html",
+    ]
+  }
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
